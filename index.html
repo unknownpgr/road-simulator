@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <script src="./three.js"></script>
+    <style>
+      body,
+      html {
+        margin: 0px;
+        padding: 0px;
+      }
+      canvas {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <script>
+      // Define scene, camera, renderer.
+      let scene = new THREE.Scene();
+      let camera = new THREE.PerspectiveCamera(
+        75, // Field of view
+        window.innerWidth / window.innerHeight, // Aspect ratio
+        0.1, // Near clipping plane
+        1000 // Far clipping plane
+      );
+      let renderer = new THREE.WebGLRenderer();
+      renderer.setSize(
+        window.innerWidth,
+        window.innerHeight,
+        document.body.appendChild(renderer.domElement)
+      );
+
+      // Scene, camera, renderer are not combined yet.
+    </script>
+  </body>
+</html>
