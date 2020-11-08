@@ -6,6 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Document</title>
   <script src="./three.js"></script>
+  <script src="./vec2d.js"></script>
+  <script src="./thick.js"></script>
   <style>
     body,
     html {
@@ -37,46 +39,80 @@
       document.body.appendChild(renderer.domElement)
     );
 
-    // Set camera position
-    camera.position.set(0, 1, 10)
-    camera.lookAt(0, 0, 0)
+    function getThickLineGeometry([left, right]) {
+      let n = left.length
+      let vertices = []
+      let faces = []
 
-    function normal(a, b) {
-      let d = [a[1] - b[1], b[0] - a[0]]
-      let l = Math.sqrt(d[0] * d[0] + d[1] * d[1])
-      return [d[0] / l, d[1] / l]
-    }
-
-    // Crate lane mesh
-    function getLane(points, thick = 0.1) {
-      let vs = []
-      let fs = []
-      let n = points.length;
-      for (let i = 0; i < n - 1; i++) {
-
+      for (let i = 0; i < n; i++) {
+        vertices.push(new THREE.Vector3(left[i].x, 0, left[i].y))
+        vertices.push(new THREE.Vector3(right[i].x, 0, right[i].y))
       }
+
+      for (let i = 0; i < n - 1; i++) {
+        faces.push(new THREE.Face3(
+          i * 2 + 2,
+          i * 2 + 1,
+          i * 2 + 0))
+        faces.push(new THREE.Face3(
+          i * 2 + 3,
+          i * 2 + 1,
+          i * 2 + 2))
+      }
+
+      const geometry = new THREE.Geometry();
+      geometry.vertices = vertices;
+      geometry.faces = faces;
+      geometry.computeBoundingSphere();
+
+      return geometry;
     }
 
+    // Crate lane geometry
+    function getLaneGeometry(points, width = 2, thick = 0.1) {
+      let [leftLanePoints, rightLanePoints] = createThickLine(points, width / 2)
+      let leftLane = createThickLine(leftLanePoints, thick);
+      let rightLane = createThickLine(rightLanePoints, thick);
+      let leftLaneGeometry = getThickLineGeometry(leftLane);
+      let rightLaneGeometry = getThickLineGeometry(rightLane);
+      return [leftLaneGeometry, rightLaneGeometry];
+    }
 
     // Define a cube and add it to scene.
+    let cube;
     {
       let geometry = new THREE.BoxGeometry();
       let material = new THREE.MeshPhongMaterial({
         color: 0x00ff00,
       });
-      let cube = new THREE.Mesh(geometry, material);
+      cube = new THREE.Mesh(geometry, material);
       scene.add(cube);
     }
 
 
     // Define a plane
+    // {
+    //   const geometry = new THREE.PlaneGeometry(50, 50);
+    //   const material = new THREE.MeshPhongMaterial({ color: 0x808080, side: THREE.DoubleSide });
+    //   const plane = new THREE.Mesh(geometry, material);
+    //   plane.position.set(0, 0, 0)
+    //   plane.lookAt(0, 1, 0)
+    //   scene.add(plane);
+    // }
+
+    const lane = t => new Vec2D(t * Math.PI * 20, Math.sin(t * Math.PI * 2) * 10)
+
+    // Define lane
     {
-      const geometry = new THREE.PlaneGeometry(50, 50);
-      const material = new THREE.MeshPhongMaterial({ color: 0x808080, side: THREE.DoubleSide });
-      const plane = new THREE.Mesh(geometry, material);
-      plane.position.set(0, 0, 0)
-      plane.lookAt(0, 1, 0)
-      scene.add(plane);
+      let points = []
+      for (let i = 0; i < 1; i += 0.01) {
+        points.push(lane(i));
+      }
+      let [leftLaneGeometry, rightLaneGeometry] = getLaneGeometry(points);
+      let leftLane = new THREE.Mesh(leftLaneGeometry, new THREE.MeshBasicMaterial());
+      let rightLane = new THREE.Mesh(rightLaneGeometry, new THREE.MeshBasicMaterial());
+      scene.add(leftLane);
+      scene.add(rightLane);
     }
 
     // Define lights
@@ -91,11 +127,20 @@
 
     camera.position.z = 10;
 
-    function animate() {
+    function animate(t) {
+      let t2 = ((Math.sin(t / 5000) + 1) / 2);
+      let t3 = ((Math.sin((t + 2500) / 5000) + 1) / 2);
+      let cam = lane(t2);
+      let dst = lane(t3);
+
+      camera.position.set(cam.x, 5, cam.y);
+      cube.position.set(dst.x, 0, dst.y);
+      camera.lookAt(dst.x, 0, dst.y);
+
       renderer.render(scene, camera);
       requestAnimationFrame(animate);
     }
-    animate();
+    animate(0);
   </script>
 </body>
 

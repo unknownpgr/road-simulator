@@ -13,24 +13,27 @@
 <script src="./vec2d.js"></script>
 <script src="./thick.js"></script>
 <script>
-  let ctx = cnv.getContext('2d');
-  const thickness = 10
+  // Use bracket to prevent side-effect
+  {
+    let ctx = cnv.getContext('2d');
+    const thickness = 10
 
-  // Generate curve
-  let points = []
-  for (let t = 0; t < Math.PI * 2; t += 0.05) {
-    points.push(new Vec2D(t * 40 + 50, Math.sin(t) * 40 + 50))
+    // Generate curve
+    let points = []
+    for (let t = 0; t < Math.PI * 2; t += 0.05) {
+      points.push(new Vec2D(t * 40 + 50, Math.sin(t) * 40 + 50))
+    }
+
+    // Calculate edge points
+    let [left, right] = createThickLine(points, thickness)
+    let edgePoints = left.concat(right.reverse());
+
+    // Draw curve
+    ctx.beginPath()
+    ctx.moveTo(edgePoints[edgePoints.length - 1].x, edgePoints[edgePoints.length - 1].y)
+    edgePoints.forEach(point => ctx.lineTo(point.x, point.y));
+    ctx.stroke();
   }
-
-  // Calculate edge points
-  let { left, right } = createThickLine(points)
-  let edgePoints = left.concat(right.reverse());
-
-  // Draw curve
-  ctx.beginPath()
-  ctx.moveTo(edgePoints[edgePoints.length - 1].x, edgePoints[edgePoints.length - 1].y)
-  edgePoints.forEach(point => ctx.lineTo(point.x, point.y));
-  ctx.stroke();
 </script>
 
 </html>

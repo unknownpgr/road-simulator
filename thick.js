@@ -1,4 +1,4 @@
-function createThickLine(points) {
+function createThickLine(points, thickness) {
 
   let n = points.length;
   let R = Math.PI / 2;
@@ -23,5 +23,5 @@ function createThickLine(points) {
   left.push(points[n - 1].add(segments[n - 2].rot(R).norm().mul(thickness)));
   right.push(points[n - 1].add(segments[n - 2].rot(-R).norm().mul(thickness)));
 
-  return { left, right };
+  return [left, right];
 }
