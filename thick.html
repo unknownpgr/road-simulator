@@ -11,35 +11,8 @@
   <canvas id="cnv" width="500" height="500"></canvas>
 </body>
 <script src="./vec2d.js"></script>
+<script src="./thick.js"></script>
 <script>
-  function generateThickLine(points) {
-
-    let n = points.length;
-    let R = Math.PI / 2;
-    let segments = [], left = [], right = [];
-
-    for (let i = 0; i < n - 1; i++)segments.push(points[i + 1].sub(points[i]));
-
-    // Start points
-    left.push(points[0].add(segments[0].rot(R).norm().mul(thickness)))
-    right.push(points[0].add(segments[0].rot(-R).norm().mul(thickness)))
-
-    // Middle points
-    for (let i = 0; i < n - 2; i++) {
-      let sint = segments[i].crs(segments[i + 1]) / (segments[i].len() * segments[i + 1].len()) // sin(theta); theta = angle between segment[i] and segment[i+1]
-      let unit = segments[i].norm().sub(segments[i + 1].norm())
-      let d = unit.mul(thickness).div(sint) // d is 'right' side vector.0
-      right.push(points[i + 1].add(d))
-      left.push(points[i + 1].sub(d));
-    }
-
-    // End points
-    left.push(points[n - 1].add(segments[n - 2].rot(R).norm().mul(thickness)))
-    right.push(points[n - 1].add(segments[n - 2].rot(-R).norm().mul(thickness)))
-
-    return { left, right }
-  }
-
   let ctx = cnv.getContext('2d');
   const thickness = 10
 
@@ -50,7 +23,7 @@
   }
 
   // Calculate edge points
-  let { left, right } = generateThickLine(points)
+  let { left, right } = createThickLine(points)
   let edgePoints = left.concat(right.reverse());
 
   // Draw curve
