@@ -4,92 +4,59 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="./victor.min.js"></script>
   <title>Thick line simulation</title>
 </head>
 
 <body>
   <canvas id="cnv" width="500" height="500"></canvas>
 </body>
+<script src="./vec2d.js"></script>
 <script>
-  class Vec2D {
-    constructor(x, y) {
-      this.x = x;
-      this.y = y;
+  function generateThickLine(points) {
+
+    let n = points.length;
+    let R = Math.PI / 2;
+    let segments = [], left = [], right = [];
+
+    for (let i = 0; i < n - 1; i++)segments.push(points[i + 1].sub(points[i]));
+
+    // Start points
+    left.push(points[0].add(segments[0].rot(R).norm().mul(thickness)))
+    right.push(points[0].add(segments[0].rot(-R).norm().mul(thickness)))
+
+    // Middle points
+    for (let i = 0; i < n - 2; i++) {
+      let sint = segments[i].crs(segments[i + 1]) / (segments[i].len() * segments[i + 1].len()) // sin(theta); theta = angle between segment[i] and segment[i+1]
+      let unit = segments[i].norm().sub(segments[i + 1].norm())
+      let d = unit.mul(thickness).div(sint) // d is 'right' side vector.0
+      right.push(points[i + 1].add(d))
+      left.push(points[i + 1].sub(d));
     }
 
-    add(a) {
-      return new Vec2D(this.x + a.x, this.y + a.y);
-    }
+    // End points
+    left.push(points[n - 1].add(segments[n - 2].rot(R).norm().mul(thickness)))
+    right.push(points[n - 1].add(segments[n - 2].rot(-R).norm().mul(thickness)))
 
-    sub(a) {
-      return new Vec2D(this.x - a.x, this.y - a.y);
-    }
-
-    mul(a) {
-      return new Vec2D(this.x * a, this.y * a);
-    }
-
-    div(a) {
-      return new Vec2D(this.x / a, this.y / a);
-    }
-
-    dot(a) {
-      return this.x * a.x + this.y * a.y;
-    }
-
-    len() {
-      return Math.sqrt(this.dot(this))
-    }
-
-    norm() {
-      return this.div(this.len())
-    }
-
-    rotR90() {
-      return new Vec2D()
-    }
+    return { left, right }
   }
 
   let ctx = cnv.getContext('2d');
-
   const thickness = 10
-  const thickVictor = new Victor(thickness, thickness)
 
+  // Generate curve
   let points = []
   for (let t = 0; t < Math.PI * 2; t += 0.05) {
-    points.push(new Victor(t * 40 + 50, Math.sin(t) * 40 + 50))
+    points.push(new Vec2D(t * 40 + 50, Math.sin(t) * 40 + 50))
   }
 
-  let segments = []
+  // Calculate edge points
+  let { left, right } = generateThickLine(points)
+  let edgePoints = left.concat(right.reverse());
 
-  for (let i = 0; i < points.length - 1; i++) {
-    segments.push(points[i + 1].clone().subtract(points[i]))
-  }
-
-  let left = [], right = []
-  left.push(points[0].clone().add(segments[0].clone().rotateDeg(90).norm().multiply(thickVictor)))
-  right.push(points[0].clone().add(segments[0].clone().rotateDeg(-90).norm().multiply(thickVictor)))
-  console.log(left, right)
-  for (let i = 0; i < points.length - 2; i++) {
-    let crs = segments[i].cross(segments[i + 1]) / (segments[i].length() * segments[i + 1].length())
-    let unit = segments[i].clone().norm().subtract(segments[i + 1].clone().norm())
-    let d = unit.clone().multiply(thickVictor).divide(new Victor(crs, crs))
-    // d is 'right' side vector.
-    right.push(points[i + 1].clone().add(d))
-    left.push(points[i + 1].clone().subtract(d));
-  }
-  left.push(points[points.length - 1].clone().add(segments[points.length - 2].clone().rotateDeg(90).norm().multiply(thickVictor)))
-  right.push(points[points.length - 1].clone().add(segments[points.length - 2].clone().rotateDeg(-90).norm().multiply(thickVictor)))
-
-  let edge = left.concat(right.reverse());
-  console.log(edge);
+  // Draw curve
   ctx.beginPath()
-  ctx.moveTo(edge[edge.length - 1].x, edge[edge.length - 1].y)
-  edge.forEach(point => {
-    console.log(point)
-    ctx.lineTo(point.x, point.y);
-  });
+  ctx.moveTo(edgePoints[edgePoints.length - 1].x, edgePoints[edgePoints.length - 1].y)
+  edgePoints.forEach(point => ctx.lineTo(point.x, point.y));
   ctx.stroke();
 </script>
 
