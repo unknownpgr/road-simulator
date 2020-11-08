@@ -1,39 +1,102 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Document</title>
-    <script src="./three.js"></script>
-    <style>
-      body,
-      html {
-        margin: 0px;
-        padding: 0px;
-      }
-      canvas {
-        display: block;
-      }
-    </style>
-  </head>
-  <body>
-    <script>
-      // Define scene, camera, renderer.
-      let scene = new THREE.Scene();
-      let camera = new THREE.PerspectiveCamera(
-        75, // Field of view
-        window.innerWidth / window.innerHeight, // Aspect ratio
-        0.1, // Near clipping plane
-        1000 // Far clipping plane
-      );
-      let renderer = new THREE.WebGLRenderer();
-      renderer.setSize(
-        window.innerWidth,
-        window.innerHeight,
-        document.body.appendChild(renderer.domElement)
-      );
 
-      // Scene, camera, renderer are not combined yet.
-    </script>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Document</title>
+  <script src="./three.js"></script>
+  <style>
+    body,
+    html {
+      margin: 0px;
+      padding: 0px;
+    }
+
+    canvas {
+      display: block;
+    }
+  </style>
+</head>
+
+<body>
+  <script>
+
+    // Define scene, camera, renderer.
+    let scene = new THREE.Scene();
+    let camera = new THREE.PerspectiveCamera(
+      75, // Field of view
+      window.innerWidth / window.innerHeight, // Aspect ratio
+      0.1, // Near clipping plane
+      1000 // Far clipping plane
+    );
+    let renderer = new THREE.WebGLRenderer();
+    renderer.setSize(
+      window.innerWidth,
+      window.innerHeight,
+      document.body.appendChild(renderer.domElement)
+    );
+
+    // Set camera position
+    camera.position.set(0, 1, 10)
+    camera.lookAt(0, 0, 0)
+
+    function normal(a, b) {
+      let d = [a[1] - b[1], b[0] - a[0]]
+      let l = Math.sqrt(d[0] * d[0] + d[1] * d[1])
+      return [d[0] / l, d[1] / l]
+    }
+
+    // Crate lane mesh
+    function getLane(points, thick = 0.1) {
+      let vs = []
+      let fs = []
+      let n = points.length;
+      for (let i = 0; i < n - 1; i++) {
+
+      }
+    }
+
+
+    // Define a cube and add it to scene.
+    {
+      let geometry = new THREE.BoxGeometry();
+      let material = new THREE.MeshPhongMaterial({
+        color: 0x00ff00,
+      });
+      let cube = new THREE.Mesh(geometry, material);
+      scene.add(cube);
+    }
+
+
+    // Define a plane
+    {
+      const geometry = new THREE.PlaneGeometry(50, 50);
+      const material = new THREE.MeshPhongMaterial({ color: 0x808080, side: THREE.DoubleSide });
+      const plane = new THREE.Mesh(geometry, material);
+      plane.position.set(0, 0, 0)
+      plane.lookAt(0, 1, 0)
+      scene.add(plane);
+    }
+
+    // Define lights
+    {
+      let light = new THREE.AmbientLight(0x404040); // soft white light
+      scene.add(light);
+    }
+    {
+      let light = new THREE.DirectionalLight(0xffffff, 0.5);
+      scene.add(light);
+    }
+
+    camera.position.z = 10;
+
+    function animate() {
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+    animate();
+  </script>
+</body>
+
 </html>
