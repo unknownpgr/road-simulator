@@ -44,3 +44,5 @@ class Vec2D {
     return new Vec2D(this.x, this.y);
   }
 }
+
+export default Vec2D;

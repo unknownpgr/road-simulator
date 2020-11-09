@@ -1,3 +1,5 @@
+import Vec2D from './vec2d.js';
+
 function createThickLine(points, thickness) {
   const EPSILON = 0.0001;
   const t = thickness / 2;
@@ -32,3 +34,5 @@ function createThickLine(points, thickness) {
 
   return [left, right];
 }
+
+export default createThickLine;

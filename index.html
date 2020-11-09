@@ -5,9 +5,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Document</title>
-  <script src="./three.js"></script>
-  <script src="./vec2d.js"></script>
-  <script src="./thick.js"></script>
+  <script src="./three.js" type="module"></script>
+  <script src="./vec2d.js" type="module"></script>
+  <script src="./thick.js" type="module"></script>
+  <script src="./OBJLoader.js" type="module"></script>
   <style>
     body,
     html {
@@ -22,17 +23,37 @@
 </head>
 
 <body>
-  <script>
+  <script type="module">
+    import Vec2D from './vec2d.js';
+    import {
+      Scene,
+      PerspectiveCamera,
+      DoubleSide,
+      WebGLRenderer,
+      Vector3,
+      Face3,
+      Geometry,
+      PlaneGeometry,
+      BoxGeometry,
+      MeshPhongMaterial,
+      MeshBasicMaterial,
+      Mesh,
+      AmbientLight,
+      PointLight,
+      SphereGeometry
+    } from "./three.js"
+    import createThickLine from "./thick.js"
+    import { OBJLoader } from "./OBJLoader.js"
 
     // Define scene, camera, renderer.
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(
+    const scene = new Scene();
+    const camera = new PerspectiveCamera(
       30, // Field of view
       640 / 480, // Aspect ratio
       0.1, // Near clipping plane
       1000 // Far clipping plane
     );
-    const renderer = new THREE.WebGLRenderer();
+    const renderer = new WebGLRenderer();
     renderer.setSize(
       640,
       480,
@@ -46,22 +67,22 @@
       let faces = []
 
       for (let i = 0; i < n; i++) {
-        vertices.push(new THREE.Vector3(left[i].x, 0, left[i].y))
-        vertices.push(new THREE.Vector3(right[i].x, 0, right[i].y))
+        vertices.push(new Vector3(left[i].x, 0, left[i].y))
+        vertices.push(new Vector3(right[i].x, 0, right[i].y))
       }
 
       for (let i = 0; i < n - 1; i++) {
-        faces.push(new THREE.Face3(
+        faces.push(new Face3(
           i * 2 + 2,
           i * 2 + 1,
           i * 2 + 0))
-        faces.push(new THREE.Face3(
+        faces.push(new Face3(
           i * 2 + 3,
           i * 2 + 1,
           i * 2 + 2))
       }
 
-      const geometry = new THREE.Geometry();
+      const geometry = new Geometry();
       geometry.vertices = vertices;
       geometry.faces = faces;
       geometry.computeBoundingSphere();
@@ -127,11 +148,11 @@
     // Define a cube and add it to scene.
     let cube;
     {
-      let geometry = new THREE.BoxGeometry();
-      let material = new THREE.MeshPhongMaterial({
+      let geometry = new BoxGeometry();
+      let material = new MeshPhongMaterial({
         color: 0x00ff00,
       });
-      cube = new THREE.Mesh(geometry, material);
+      cube = new Mesh(geometry, material);
       cube.position.set(0, -20, 0) // Hide cube
       cube.scale.set(20, 20, 20)
       scene.add(cube);
@@ -140,9 +161,9 @@
     // Define ground
     let ground
     {
-      const geometry = new THREE.PlaneGeometry(1000, 1000);
-      const material = new THREE.MeshPhongMaterial({ color: 0x101010, side: THREE.DoubleSide });
-      ground = new THREE.Mesh(geometry, material);
+      const geometry = new PlaneGeometry(1000, 1000);
+      const material = new MeshPhongMaterial({ color: 0x101010, side: DoubleSide });
+      ground = new Mesh(geometry, material);
       ground.position.set(0, -0.1, 0)
       ground.lookAt(0, 1, 0)
       scene.add(ground);
@@ -164,16 +185,16 @@
         points.push(lane(t))
       }
       let [leftLaneGeometry, rightLaneGeometry] = getLaneGeometry(points, 40, 1.8);
-      let material = new THREE.MeshPhongMaterial({ color: 0xffff40, side: THREE.DoubleSide })
-      let leftLane = new THREE.Mesh(leftLaneGeometry, material);
-      let rightLane = new THREE.Mesh(rightLaneGeometry, material);
+      let material = new MeshPhongMaterial({ color: 0xffff40, side: DoubleSide })
+      let leftLane = new Mesh(leftLaneGeometry, material);
+      let rightLane = new Mesh(rightLaneGeometry, material);
       scene.add(leftLane);
       scene.add(rightLane);
     }
 
     // Define ambient light
     {
-      let light = new THREE.AmbientLight(0x202020); // soft white light
+      let light = new AmbientLight(0x202020); // soft white light
       scene.add(light);
     }
 
@@ -183,7 +204,7 @@
       const height = 100;
       for (let x = 0; x < 3; x++) {
         for (let y = 0; y < 3; y++) {
-          let light = new THREE.PointLight(
+          let light = new PointLight(
             0xffffff, // Color
             1, // Intensity
             600, // Distance (0=No limit)
@@ -193,11 +214,44 @@
           scene.add(light)
 
           // White sphare to check light position
-          let sphere = new THREE.Mesh(new THREE.SphereGeometry(), new THREE.MeshBasicMaterial())
+          let sphere = new Mesh(new SphereGeometry(), new MeshBasicMaterial())
           sphere.position.set(x * dist, height, y * dist);
           scene.add(sphere)
         }
       }
+    }
+
+    // Load object
+    {
+      // instantiate a loader
+      const loader = new OBJLoader();
+      loader.load(
+        'human.obj',
+        function (object) {
+          object.position.set(250, 0, 0)
+          object.traverse(function (child) {
+            if (child instanceof Mesh) {
+              child.material.color.set(0x404040);
+            }
+          });
+
+          scene.add(object);
+        });
+
+      loader.load(
+        'laptop.obj',
+        function (object) {
+          object.position.set(249, 9, 0)
+          object.rotation.y = Math.PI;
+          object.scale.set(0.2, 0.2, 0.2)
+          object.traverse(function (child) {
+            if (child instanceof Mesh) {
+              child.material.color.set(0x202020);
+            }
+          });
+          scene.add(object);
+        });
+
     }
 
     camera.position.set(-100, 170, -100)
