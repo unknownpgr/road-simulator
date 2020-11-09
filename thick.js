@@ -1,4 +1,5 @@
 function createThickLine(points, thickness) {
+  const EPSILON = 0.00001;
 
   let n = points.length;
   let R = Math.PI / 2;
@@ -13,10 +14,16 @@ function createThickLine(points, thickness) {
   // Middle points
   for (let i = 0; i < n - 2; i++) {
     let sint = segments[i].crs(segments[i + 1]) / (segments[i].len() * segments[i + 1].len()); // sin(theta); theta = angle between segment[i] and segment[i+1]
-    let unit = segments[i].norm().sub(segments[i + 1].norm());
-    let d = unit.mul(thickness).div(sint); // d is 'right' side vector.0
-    right.push(points[i + 1].add(d));
-    left.push(points[i + 1].sub(d));
+
+    if (Math.abs(sint) < EPSILON) {
+      left.push(points[i + 1].add(segments[i].rot(R).norm().mul(thickness)));
+      right.push(points[i + 1].add(segments[i].rot(-R).norm().mul(thickness)));
+    } else {
+      let unit = segments[i].norm().sub(segments[i + 1].norm());
+      let d = unit.mul(thickness).div(sint); // d is 'right' side vector.0
+      right.push(points[i + 1].add(d));
+      left.push(points[i + 1].sub(d));
+    }
   }
 
   // End points
