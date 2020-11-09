@@ -20,7 +20,7 @@ Since this project was created using `WebGL`+`THREE.js`, you can apply almost an
 
 # Comparation
 
-In this section, You will probably realize that the simulated image is a bit yellow. This makes it difficult to distinguish between the background and the lane. By using these datasets, AI trained with this dataset will work well in environments where lanes and backgrounds are confusing.
+In this section, You will probably realize that the simulated image is a bit yellow. This makes it difficult to distinguish between the background and the lane. I intended it so that the AI trained with this dataset will work well in environments where lanes and backgrounds are confusing.
 
 ## Simulation Result
 
