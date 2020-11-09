@@ -160,7 +160,7 @@
         [40, -Math.PI],
         [0, 200]])
       let points = []
-      for (let t = 0; t < 1; t += 0.01) {
+      for (let t = 0; t < 1; t += 0.002) {
         points.push(lane(t))
       }
       let [leftLaneGeometry, rightLaneGeometry] = getLaneGeometry(points, 40, 1.8);
@@ -201,6 +201,7 @@
     }
 
     camera.position.set(-100, 170, -100)
+    renderer.setClearColor(0xf0f0d0, 1);
 
     const pos = t => ((1 - Math.cos(t / 5000) * 0.98) / 2)
     const delta = 10
