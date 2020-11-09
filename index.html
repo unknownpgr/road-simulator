@@ -68,6 +68,45 @@
       return geometry;
     }
 
+    function getPath(segments) {
+      // 'segments' is a list of tuples <radius, anlge(length)>.
+      // If radius <= 0, then the given segment is regarded as a line with given length.
+      // Else, the given segment is regarded as a arc with given radius and angle.
+
+      let angle = 0;
+      let pos = new Vec2D(0, 0);
+      let pathFunctions = [];
+      let segmentLengthes = [0];
+      let totalLength = 0;
+
+      segments.forEach(segment => {
+        const a = angle; // Copy variable so that it would be immutable.
+        const p = pos.clone();
+        if (segment[0] <= 0) {
+          // Line segment
+          pathFunctions.push(t => new Vec2D(Math.cos(a), Math.sin(a)).mul(segment[1] * t).add(p))
+          totalLength += segment[1]
+        } else {
+          // Curve segment
+          pathFunctions.push(t => new Vec2D(Math.cos(segment[1] * t) - 1, Math.sin(segment[1] * t)).rot(a - Math.sign(segment[1]) * Math.PI / 2).mul(segment[0]).add(p))
+          totalLength += Math.abs(segment[0] * segment[1])
+          angle += segment[1]
+        }
+        pos = pathFunctions[pathFunctions.length - 1](1);
+        segmentLengthes.push(totalLength)
+      });
+
+      return x => {
+        let t = x * totalLength
+        for (let i = 0; i < pathFunctions.length; i++) {
+          if (segmentLengthes[i] <= t && t <= segmentLengthes[i + 1]) {
+            let sgementT = (t - segmentLengthes[i]) / (segmentLengthes[i + 1] - segmentLengthes[i]);
+            return pathFunctions[i](sgementT)
+          }
+        }
+      }
+    }
+
     // Crate lane geometry
     function getLaneGeometry(points, width = 2, thick = 0.1) {
       let [leftLanePoints, rightLanePoints] = createThickLine(points, width / 2)
@@ -100,15 +139,28 @@
     //   scene.add(plane);
     // }
 
-    const lane = t => new Vec2D(t * Math.PI * 20, Math.sin(t * Math.PI * 2) * 10)
+    // const lane = t => new Vec2D(t * Math.PI * 20, Math.sin(t * Math.PI * 2) * 10)
+    const lane = getPath([
+      [0, 5],
+      [3, Math.PI / 2],
+      [0, 5],
+      [3, Math.PI / 2],
+      [0, 10],
+      [3, -Math.PI],
+      [0, 5],]
+    )
 
     // Define lane
     {
       let points = []
+      let log = ""
       for (let i = 0; i < 1; i += 0.01) {
-        points.push(lane(i));
+        let point = lane(i)
+        points.push(point);
+        log += point.x + "," + point.y + '\n'
       }
-      let [leftLaneGeometry, rightLaneGeometry] = getLaneGeometry(points);
+      console.log(log)
+      let [leftLaneGeometry, rightLaneGeometry] = getLaneGeometry(points, 0.2, 0.01);
       let leftLane = new THREE.Mesh(leftLaneGeometry, new THREE.MeshBasicMaterial());
       let rightLane = new THREE.Mesh(rightLaneGeometry, new THREE.MeshBasicMaterial());
       scene.add(leftLane);
@@ -133,7 +185,7 @@
       let cam = lane(t2);
       let dst = lane(t3);
 
-      camera.position.set(cam.x, 5, cam.y);
+      camera.position.set(20, 10, 20);
       cube.position.set(dst.x, 0, dst.y);
       camera.lookAt(dst.x, 0, dst.y);
 
