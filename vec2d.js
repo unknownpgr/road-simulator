@@ -39,4 +39,8 @@ class Vec2D {
   crs(a) {
     return this.x * a.y - this.y * a.x;
   }
+
+  clone() {
+    return new Vec2D(this.x, this.y);
+  }
 }
