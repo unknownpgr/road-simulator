@@ -25,22 +25,23 @@
   <script>
 
     // Define scene, camera, renderer.
-    let scene = new THREE.Scene();
-    let camera = new THREE.PerspectiveCamera(
-      75, // Field of view
-      window.innerWidth / window.innerHeight, // Aspect ratio
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(
+      30, // Field of view
+      640 / 480, // Aspect ratio
       0.1, // Near clipping plane
       1000 // Far clipping plane
     );
-    let renderer = new THREE.WebGLRenderer();
+    const renderer = new THREE.WebGLRenderer();
     renderer.setSize(
-      window.innerWidth,
-      window.innerHeight,
+      640,
+      480,
       document.body.appendChild(renderer.domElement)
     );
 
+    // Get geometry of thick line
     function getThickLineGeometry([left, right]) {
-      let n = left.length
+      const n = left.length
       let vertices = []
       let faces = []
 
@@ -64,24 +65,37 @@
       geometry.vertices = vertices;
       geometry.faces = faces;
       geometry.computeBoundingSphere();
+      geometry.computeFaceNormals();
+      geometry.computeVertexNormals();
 
       return geometry;
     }
 
-    function getPath(segments) {
+    // Crate lane geometry
+    function getLaneGeometry(points, width = 2, thick = 0.1) {
+      let [leftLanePoints, rightLanePoints] = createThickLine(points, width)
+      let leftLane = createThickLine(leftLanePoints, thick);
+      let rightLane = createThickLine(rightLanePoints, thick);
+      let leftLaneGeometry = getThickLineGeometry(leftLane);
+      let rightLaneGeometry = getThickLineGeometry(rightLane);
+      return [leftLaneGeometry, rightLaneGeometry];
+    }
+
+    // Get path function from segments
+    function getPathFunction(segments) {
       // 'segments' is a list of tuples <radius, anlge(length)>.
       // If radius <= 0, then the given segment is regarded as a line with given length.
       // Else, the given segment is regarded as a arc with given radius and angle.
 
       let angle = 0;
-      let pos = new Vec2D(0, 0);
+      let pos1 = new Vec2D(0, 0);
       let pathFunctions = [];
       let segmentLengthes = [0];
       let totalLength = 0;
 
       segments.forEach(segment => {
         const a = angle; // Copy variable so that it would be immutable.
-        const p = pos.clone();
+        const p = pos1.clone();
         if (segment[0] <= 0) {
           // Line segment
           pathFunctions.push(t => new Vec2D(Math.cos(a), Math.sin(a)).mul(segment[1] * t).add(p))
@@ -92,29 +106,22 @@
           totalLength += Math.abs(segment[0] * segment[1])
           angle += segment[1]
         }
-        pos = pathFunctions[pathFunctions.length - 1](1);
+        pos1 = pathFunctions[pathFunctions.length - 1](1);
         segmentLengthes.push(totalLength)
       });
 
       return x => {
         let t = x * totalLength
-        for (let i = 0; i < pathFunctions.length; i++) {
+        let i;
+        for (i = 0; i < pathFunctions.length; i++) {
           if (segmentLengthes[i] <= t && t <= segmentLengthes[i + 1]) {
             let sgementT = (t - segmentLengthes[i]) / (segmentLengthes[i + 1] - segmentLengthes[i]);
             return pathFunctions[i](sgementT)
           }
         }
+        let sgementT = (t - segmentLengthes[i]) / (segmentLengthes[i + 1] - segmentLengthes[i]);
+        return pathFunctions[i](sgementT)
       }
-    }
-
-    // Crate lane geometry
-    function getLaneGeometry(points, width = 2, thick = 0.1) {
-      let [leftLanePoints, rightLanePoints] = createThickLine(points, width / 2)
-      let leftLane = createThickLine(leftLanePoints, thick);
-      let rightLane = createThickLine(rightLanePoints, thick);
-      let leftLaneGeometry = getThickLineGeometry(leftLane);
-      let rightLaneGeometry = getThickLineGeometry(rightLane);
-      return [leftLaneGeometry, rightLaneGeometry];
     }
 
     // Define a cube and add it to scene.
@@ -125,69 +132,92 @@
         color: 0x00ff00,
       });
       cube = new THREE.Mesh(geometry, material);
+      cube.position.set(0, -20, 0) // Hide cube
+      cube.scale.set(20, 20, 20)
       scene.add(cube);
     }
 
-
-    // Define a plane
-    // {
-    //   const geometry = new THREE.PlaneGeometry(50, 50);
-    //   const material = new THREE.MeshPhongMaterial({ color: 0x808080, side: THREE.DoubleSide });
-    //   const plane = new THREE.Mesh(geometry, material);
-    //   plane.position.set(0, 0, 0)
-    //   plane.lookAt(0, 1, 0)
-    //   scene.add(plane);
-    // }
-
-    // const lane = t => new Vec2D(t * Math.PI * 20, Math.sin(t * Math.PI * 2) * 10)
-    const lane = getPath([
-      [0, 5],
-      [3, Math.PI / 2],
-      [0, 5],
-      [3, Math.PI / 2],
-      [0, 10],
-      [3, -Math.PI],
-      [0, 5],]
-    )
-
-    // Define lane
+    // Define ground
+    let ground
     {
+      const geometry = new THREE.PlaneGeometry(1000, 1000);
+      const material = new THREE.MeshPhongMaterial({ color: 0x101010, side: THREE.DoubleSide });
+      ground = new THREE.Mesh(geometry, material);
+      ground.position.set(0, -0.1, 0)
+      ground.lookAt(0, 1, 0)
+      scene.add(ground);
+    }
+
+    // Define lane. Scale unit : Centimeter
+    let lane;
+    {
+      lane = getPathFunction([
+        [0, 150],
+        [40, Math.PI * 5 / 4],
+        [50, - Math.PI * 6 / 4],
+        [35, Math.PI * 3 / 4],
+        [0, 100],
+        [40, -Math.PI],
+        [0, 200]])
       let points = []
-      let log = ""
-      for (let i = 0; i < 1; i += 0.01) {
-        let point = lane(i)
-        points.push(point);
-        log += point.x + "," + point.y + '\n'
+      for (let t = 0; t < 1; t += 0.01) {
+        points.push(lane(t))
       }
-      console.log(log)
-      let [leftLaneGeometry, rightLaneGeometry] = getLaneGeometry(points, 0.2, 0.01);
-      let leftLane = new THREE.Mesh(leftLaneGeometry, new THREE.MeshBasicMaterial());
-      let rightLane = new THREE.Mesh(rightLaneGeometry, new THREE.MeshBasicMaterial());
+      let [leftLaneGeometry, rightLaneGeometry] = getLaneGeometry(points, 40, 1.8);
+      let material = new THREE.MeshPhongMaterial({ color: 0xffff40, side: THREE.DoubleSide })
+      let leftLane = new THREE.Mesh(leftLaneGeometry, material);
+      let rightLane = new THREE.Mesh(rightLaneGeometry, material);
       scene.add(leftLane);
       scene.add(rightLane);
     }
 
-    // Define lights
+    // Define ambient light
     {
-      let light = new THREE.AmbientLight(0x404040); // soft white light
-      scene.add(light);
-    }
-    {
-      let light = new THREE.DirectionalLight(0xffffff, 0.5);
+      let light = new THREE.AmbientLight(0x202020); // soft white light
       scene.add(light);
     }
 
-    camera.position.z = 10;
+    // Define spot lights
+    {
+      const dist = 200;
+      const height = 100;
+      for (let x = 0; x < 3; x++) {
+        for (let y = 0; y < 3; y++) {
+          let light = new THREE.PointLight(
+            0xffffff, // Color
+            1, // Intensity
+            600, // Distance (0=No limit)
+            1 // Some factor
+          )
+          light.position.set(x * dist, height, y * dist)
+          scene.add(light)
 
+          // White sphare to check light position
+          let sphere = new THREE.Mesh(new THREE.SphereGeometry(), new THREE.MeshBasicMaterial())
+          sphere.position.set(x * dist, height, y * dist);
+          scene.add(sphere)
+        }
+      }
+    }
+
+    camera.position.set(-100, 170, -100)
+
+    const pos = t => ((1 - Math.cos(t / 5000) * 0.98) / 2)
+    const delta = 10
     function animate(t) {
-      let t2 = ((Math.sin(t / 5000) + 1) / 2);
-      let t3 = ((Math.sin((t + 2500) / 5000) + 1) / 2);
-      let cam = lane(t2);
-      let dst = lane(t3);
+      const pos1 = lane(pos(t));
+      const pos2 = lane(pos(t + delta))
+      const direction = pos2.sub(pos1);
+      const theta = Math.atan2(direction.x, direction.y);
 
-      camera.position.set(20, 10, 20);
-      cube.position.set(dst.x, 0, dst.y);
-      camera.lookAt(dst.x, 0, dst.y);
+      if (0) {
+        cube.position.set(pos1.x, 10, pos1.y);
+        cube.rotation.y = theta + Math.PI;
+        camera.lookAt(pos1.x, 0, pos1.y)
+      } else {
+        camera.position.set(pos1.x, 10, pos1.y);
+        camera.lookAt(pos2.x, 10 - delta / 100, pos2.y)
+      }
 
       renderer.render(scene, camera);
       requestAnimationFrame(animate);
