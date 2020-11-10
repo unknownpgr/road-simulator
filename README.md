@@ -1,4 +1,4 @@
-# Read Simulator
+# Road Simulator
 
 This project is for creating a dataset for training autonomous vehicles. Although there are many datasets on the Internet, most of them are not controllable. Therefore, I started this project to create a fully controllable dataset freely.
 
