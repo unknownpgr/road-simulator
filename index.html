@@ -5,10 +5,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Document</title>
-  <script src="./three.js" type="module"></script>
-  <script src="./vec2d.js" type="module"></script>
-  <script src="./thick.js" type="module"></script>
-  <script src="./OBJLoader.js" type="module"></script>
   <style>
     body,
     html {
@@ -24,7 +20,6 @@
 
 <body>
   <script type="module">
-    import Vec2D from './vec2d.js';
     import {
       Scene,
       PerspectiveCamera,
@@ -46,9 +41,10 @@
 
       AmbientLight,
       PointLight,
-    } from "./three.js"
-    import createThickLine from "./thick.js"
-    import { OBJLoader } from "./OBJLoader.js"
+    } from "/build/three.module.js"
+    import { OBJLoader } from "/examples/jsm/loaders/OBJLoader.js"
+    import Vec2D from './vec2d.js';
+    import createThickLine from "/thick.js"
 
     // Define constants
     const IMG_WIDTH = 320;
@@ -264,8 +260,9 @@
       document.body.appendChild(renderer.domElement)
     );
 
-    const pos = t => ((1 - Math.cos(t / 7500)) / 2) // Project time [0,inf) to [0-1].
-    const noise = t => Math.sin(t / 200) * 3 + Math.cos(t * Math.E / 500) * 4
+    const pos = t => ((t / 40000) % 1 + 1) % 1 // Project time [0,inf) to [0-1].
+    const posNoise = t => Math.sin(t / 200) * 3 + Math.cos(t * Math.E / 500) * 4
+    const angleNoise = t => (Math.sin(t * Math.E / 400) + Math.cos(t * Math.PI / 200)) * Math.PI / 24;
     function animate(t) {
       const pos1 = lane(pos(t));
       const pos2 = lane(pos(t - 100));
@@ -274,8 +271,9 @@
       camBox.position.set(pos1.x, 0, pos1.y);
       camBox.lookAt(pos2.x, 0, pos2.y)
 
-      // Add noise
-      camera.position.x = noise(t)
+      // Add posNoise
+      camera.position.x = posNoise(t)
+      camera.rotation.y = angleNoise(t)
 
       renderer.render(scene, camera);
       requestAnimationFrame(animate);
