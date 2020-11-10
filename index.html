@@ -15,6 +15,10 @@
     canvas {
       display: block;
     }
+
+    button {
+      margin: 16px;
+    }
   </style>
 </head>
 
@@ -60,6 +64,8 @@
     const CAM_HEIGHT = 10; // Unit : cm
     const CAM_ANGLE = 0; // Unit : rad
     const CAM_FOV = 30; // Unit : degree
+
+    let isSave = false;
 
     // Define scene, camera, renderer.
     const scene = new Scene();
@@ -244,8 +250,30 @@
             }
           });
           scene.add(object);
-        });
 
+          let buttonShow = document.createElement('button')
+          let buttonSave = document.createElement('button')
+
+          buttonShow.innerText = 'Just run simulation (available on GitHub)'
+          buttonSave.innerText = 'Run simulation and save the result (Receiver server required, not available on GitHub.)'
+
+          buttonShow.onclick = () => {
+            isSave = false;
+            animate(0);
+            document.body.removeChild(buttonSave)
+            document.body.removeChild(buttonShow)
+          }
+
+          buttonSave.onclick = () => {
+            isSave = true;
+            animate();
+            document.body.removeChild(buttonSave)
+            document.body.removeChild(buttonShow)
+          }
+
+          document.body.appendChild(buttonShow);
+          document.body.appendChild(buttonSave);
+        });
     }
 
     let camBox = new Object3D()
@@ -317,7 +345,8 @@
     // Generate dataset
     let i = 0;
     let t = 0;
-    function animate() {
+    function animate(t_) {
+      if (!isSave) t = t_ / 40000;
       const pos1 = lane(t);
       const pos2 = lane(t + 0.01);
 
@@ -336,25 +365,30 @@
       composer.render();
 
       // Send rendered image to server
-      let data = renderer.domElement.toDataURL('image/png');
-      data = data.replace('data:image/png;base64', pN + '_' + aN + '.png')
-      fetch("save/",
-        {
-          body: data,
-          headers: { 'content-type': 'text/html' },
-          method: "POST"
-        }).then(() => {
-          if (t < 0.9) {
-            t += 0.001;
-            i++;
-            setTimeout(animate, 0);
-          } else {
-            document.body.innerHTML = '<h1>Simulation Finished</h1>'
-          }
-        });
+      if (isSave) {
+        let data = renderer.domElement.toDataURL('image/png');
+        data = data.replace('data:image/png;base64', pN + '_' + aN + '.png')
+        fetch("save/",
+          {
+            body: data,
+            headers: { 'content-type': 'text/html' },
+            method: "POST"
+          }).then(() => {
+            if (t < 0.9) {
+              t += 0.001;
+              i++;
+              setTimeout(animate, 0);
+            } else {
+              document.body.innerHTML = '<h1>Simulation Finished</h1>'
+            }
+          });
+      } else {
+        if (t < 0.9) { requestAnimationFrame(animate) }
+        else {
+          document.body.innerHTML = '<h1>Simulation Finished</h1>'
+        }
+      }
     }
-
-    setTimeout(animate, 1000);
   </script>
 </body>
 
