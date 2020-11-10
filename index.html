@@ -46,7 +46,7 @@
     import { WebGLRenderTarget } from "/three.js-dev/src/renderers/WebGLRenderTarget.js"
     import { OBJLoader } from "/three.js-dev/examples/jsm/loaders/OBJLoader.js"
     import { EffectComposer } from "/three.js-dev/examples/jsm/postprocessing/EffectComposer.js"
-    import { BlendShader } from "/three.js-dev/examples/jsm/shaders/BlendShader.js"
+    import { CustomShader } from "./CustomShader.js"
     import { CopyShader } from "/three.js-dev/examples/jsm/shaders/CopyShader.js"
     import { RenderPass } from "/three.js-dev/examples/jsm/postprocessing/RenderPass.js"
     import { ShaderPass } from "/three.js-dev/examples/jsm/postprocessing/ShaderPass.js"
@@ -269,31 +269,35 @@
     );
 
     const composer = new EffectComposer(renderer);
-    {
-      const renderPass = new RenderPass(scene, camera);
-      const renderTargetParameters = {
-        minFilter: LinearFilter,
-        magFilter: LinearFilter,
-        stencilBuffer: false
-      };
-      const savePass = new SavePass(new WebGLRenderTarget(window.innerWidth, window.innerHeight, renderTargetParameters));
-      const blendPass = new ShaderPass(BlendShader, 'tDiffuse1');
-      blendPass.uniforms['tDiffuse2'].value = savePass.renderTarget.texture;
-      blendPass.uniforms['mixRatio'].value = 0.65;
+    // Render pass
+    const renderPass = new RenderPass(scene, camera);
+    const renderTargetParameters = {
+      minFilter: LinearFilter,
+      magFilter: LinearFilter,
+      stencilBuffer: false
+    };
+    // Save pass
+    const savePass = new SavePass(new WebGLRenderTarget(window.innerWidth, window.innerHeight, renderTargetParameters));
+    // Blend Pass
+    const customPass = new ShaderPass(CustomShader, 'tDiffuse1');
+    customPass.uniforms['tDiffuse2'].value = savePass.renderTarget.texture;
+    customPass.uniforms['mixRatio'].value = 0.65;
+    customPass.uniforms['amount'].value = 0;
+    // Output pass
+    const outputPass = new ShaderPass(CopyShader);
+    outputPass.renderToScreen = true;
+    // Compose passes
+    composer.addPass(renderPass);
+    composer.addPass(customPass);
+    composer.addPass(savePass);
+    composer.addPass(outputPass);
 
-      let outputPass = new ShaderPass(CopyShader);
-      outputPass.renderToScreen = true;
-
-      composer.addPass(renderPass);
-      composer.addPass(blendPass);
-      composer.addPass(savePass);
-      composer.addPass(outputPass);
-    }
 
     const pos = t => ((t / 40000) % 1 + 1) % 1 // Project time [0,inf) to [0-1].
     const posNoise = t => Math.sin(t / 200) * 3 + Math.cos(t * Math.E / 500) * 4
-    const angleNoise = t => (Math.sin(t * Math.E / 400) + Math.cos(t * Math.PI / 200)) * Math.PI / 24;
+    const angleNoise = t => (Math.sin(t * Math.E / 500) + Math.cos(t * Math.PI / 400)) * Math.PI / 36;
     function animate(t) {
+      t *= 0.75 // Slower simulation a little.
       const pos1 = lane(pos(t));
       const pos2 = lane(pos(t - 100));
 
@@ -304,6 +308,9 @@
       // Add posNoise
       camera.position.x = posNoise(t)
       camera.rotation.y = angleNoise(t)
+
+      // Add texture noise
+      customPass.uniforms['amount'].value = t;
 
       composer.render();
       requestAnimationFrame(animate);
