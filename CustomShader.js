@@ -54,6 +54,7 @@ var CustomShader = {
       vec4 color = opacity * mix( texel1, texel2, mixRatio );
       vec2 uvRandom = vUv;
       uvRandom.y *= random(vec2(uvRandom.y,amount));
+      uvRandom.x *= random(vec2(uvRandom.x,amount));
       color.rgb += random(uvRandom)*0.08;
       gl_FragColor = vec4( color );
     }
