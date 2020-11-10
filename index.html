@@ -324,24 +324,6 @@
     const posNoise = t => Math.sin(t * 50 * Math.PI * Math.E) * 3 + Math.cos(t * Math.E * 100) * 4
     const angleNoise = t => (Math.sin(t * Math.E * 70) + Math.cos(t * Math.PI * 80)) * Math.PI / 36;
 
-    // 
-    function dataURItoBlob(dataURI) {
-      // convert base64/URLEncoded data component to raw binary data held in a string
-      var byteString;
-      if (dataURI.split(',')[0].indexOf('base64') >= 0)
-        byteString = atob(dataURI.split(',')[1]);
-      else
-        byteString = unescape(dataURI.split(',')[1]);
-      // 마임타입 추출
-      var mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
-      // write the bytes of the string to a typed array
-      var ia = new Uint8Array(byteString.length);
-      for (var i = 0; i < byteString.length; i++) {
-        ia[i] = byteString.charCodeAt(i);
-      }
-      return new Blob([ia], { type: mimeString });
-    }
-
     // Generate dataset
     let i = 0;
     let t = 0;
