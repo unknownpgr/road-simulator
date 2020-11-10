@@ -144,6 +144,7 @@
             return pathFunctions[i](sgementT)
           }
         }
+        i--;
         let sgementT = (t - segmentLengthes[i]) / (segmentLengthes[i + 1] - segmentLengthes[i]);
         return pathFunctions[i](sgementT)
       }
@@ -281,7 +282,7 @@
     // Blend Pass
     const customPass = new ShaderPass(CustomShader, 'tDiffuse1');
     customPass.uniforms['tDiffuse2'].value = savePass.renderTarget.texture;
-    customPass.uniforms['mixRatio'].value = 0.65;
+    customPass.uniforms['mixRatio'].value = 0.5;
     customPass.uniforms['amount'].value = 0;
     // Output pass
     const outputPass = new ShaderPass(CopyShader);
@@ -292,30 +293,68 @@
     composer.addPass(savePass);
     composer.addPass(outputPass);
 
+    const posNoise = t => Math.sin(t * 50 * Math.PI * Math.E) * 3 + Math.cos(t * Math.E * 100) * 4
+    const angleNoise = t => (Math.sin(t * Math.E * 70) + Math.cos(t * Math.PI * 80)) * Math.PI / 36;
 
-    const pos = t => ((t / 40000) % 1 + 1) % 1 // Project time [0,inf) to [0-1].
-    const posNoise = t => Math.sin(t / 200) * 3 + Math.cos(t * Math.E / 500) * 4
-    const angleNoise = t => (Math.sin(t * Math.E / 500) + Math.cos(t * Math.PI / 400)) * Math.PI / 36;
-    function animate(t) {
-      t *= 0.75 // Slower simulation a little.
-      const pos1 = lane(pos(t));
-      const pos2 = lane(pos(t - 100));
+    // 
+    function dataURItoBlob(dataURI) {
+      // convert base64/URLEncoded data component to raw binary data held in a string
+      var byteString;
+      if (dataURI.split(',')[0].indexOf('base64') >= 0)
+        byteString = atob(dataURI.split(',')[1]);
+      else
+        byteString = unescape(dataURI.split(',')[1]);
+      // 마임타입 추출
+      var mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
+      // write the bytes of the string to a typed array
+      var ia = new Uint8Array(byteString.length);
+      for (var i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+      }
+      return new Blob([ia], { type: mimeString });
+    }
+
+    // Generate dataset
+    let i = 0;
+    let t = 0;
+    function animate() {
+      const pos1 = lane(t);
+      const pos2 = lane(t + 0.01);
 
       // Follow main path
-      camBox.position.set(pos1.x, 0, pos1.y);
-      camBox.lookAt(pos2.x, 0, pos2.y)
+      camBox.position.set(pos2.x, 0, pos2.y);
+      camBox.lookAt(pos1.x, 0, pos1.y)
 
       // Add posNoise
-      camera.position.x = posNoise(t)
-      camera.rotation.y = angleNoise(t)
+      let pN = posNoise(t);
+      let aN = angleNoise(t);
+      camera.position.x = pN;
+      camera.rotation.y = aN;
 
       // Add texture noise
-      customPass.uniforms['amount'].value = t;
-
+      customPass.uniforms['amount'].value = t % 1;
       composer.render();
-      requestAnimationFrame(animate);
+
+      // Send rendered image to server
+      let data = renderer.domElement.toDataURL('image/png');
+      data = data.replace('data:image/png;base64', pN + '_' + aN + '.png')
+      fetch("save/",
+        {
+          body: data,
+          headers: { 'content-type': 'text/html' },
+          method: "POST"
+        }).then(() => {
+          if (t < 0.9) {
+            t += 0.001;
+            i++;
+            setTimeout(animate, 0);
+          } else {
+            document.body.innerHTML = '<h1>Simulation Finished</h1>'
+          }
+        });
     }
-    animate(0);
+
+    setTimeout(animate, 1000);
   </script>
 </body>
 

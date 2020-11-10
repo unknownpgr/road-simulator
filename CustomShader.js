@@ -5,27 +5,22 @@
 var CustomShader = {
 
   uniforms: {
-
     "tDiffuse1": { value: null },
     "tDiffuse2": { value: null },
     "mixRatio": { value: 0.5 },
     "opacity": { value: 1.0 },
     "amount": { value: 0 }
-
   },
 
-  vertexShader: [
+  vertexShader:
+    `
+    varying vec2 vUv;
 
-    "varying vec2 vUv;",
-
-    "void main() {",
-
-    "	vUv = uv;",
-    "	gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );",
-
-    "}"
-
-  ].join("\n"),
+    void main() {
+    	vUv = uv;
+    	gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+    }
+    `,
 
   fragmentShader:
     `
@@ -54,7 +49,6 @@ var CustomShader = {
       vec4 color = opacity * mix( texel1, texel2, mixRatio );
       vec2 uvRandom = vUv;
       uvRandom.y *= random(vec2(uvRandom.y,amount));
-      uvRandom.x *= random(vec2(uvRandom.x,amount));
       color.rgb += random(uvRandom)*0.08;
       gl_FragColor = vec4( color );
     }
