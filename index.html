@@ -28,39 +28,39 @@
     import {
       Scene,
       PerspectiveCamera,
-      DoubleSide,
       WebGLRenderer,
+
       Vector3,
       Face3,
+      Object3D,
+      DoubleSide,
+
       Geometry,
-      PlaneGeometry,
       BoxGeometry,
+      PlaneGeometry,
+      SphereGeometry,
+
+      Mesh,
       MeshPhongMaterial,
       MeshBasicMaterial,
-      Mesh,
+
       AmbientLight,
       PointLight,
-      SphereGeometry
     } from "./three.js"
     import createThickLine from "./thick.js"
     import { OBJLoader } from "./OBJLoader.js"
 
+    // Define constants
+    const IMG_WIDTH = 320;
+    const IMG_HEIGHT = 240;
+    const CAM_HEIGHT = 10; // Unit : cm
+    const CAM_ANGLE = 0; // Unit : rad
+    const CAM_FOV = 30; // Unit : degree
+
     // Define scene, camera, renderer.
     const scene = new Scene();
-    const camera = new PerspectiveCamera(
-      30, // Field of view
-      640 / 480, // Aspect ratio
-      0.1, // Near clipping plane
-      1000 // Far clipping plane
-    );
-    const renderer = new WebGLRenderer();
-    renderer.setSize(
-      640,
-      480,
-      document.body.appendChild(renderer.domElement)
-    );
 
-    // Get geometry of thick line
+    // Get 'geometry' of thick line. Parameter should be array of Vec2D generated from createThickLine.
     function getThickLineGeometry([left, right]) {
       const n = left.length
       let vertices = []
@@ -145,19 +145,6 @@
       }
     }
 
-    // Define a cube and add it to scene.
-    let cube;
-    {
-      let geometry = new BoxGeometry();
-      let material = new MeshPhongMaterial({
-        color: 0x00ff00,
-      });
-      cube = new Mesh(geometry, material);
-      cube.position.set(0, -20, 0) // Hide cube
-      cube.scale.set(20, 20, 20)
-      scene.add(cube);
-    }
-
     // Define ground
     let ground
     {
@@ -225,6 +212,8 @@
     {
       // instantiate a loader
       const loader = new OBJLoader();
+
+      // Load human object
       loader.load(
         'human.obj',
         function (object) {
@@ -234,10 +223,10 @@
               child.material.color.set(0x404040);
             }
           });
-
           scene.add(object);
         });
 
+      // Load laptop object
       loader.load(
         'laptop.obj',
         function (object) {
@@ -254,25 +243,39 @@
 
     }
 
-    camera.position.set(-100, 170, -100)
-    renderer.setClearColor(0xf0f0d0, 1);
+    let camBox = new Object3D()
+    scene.add(camBox)
 
-    const pos = t => ((1 - Math.cos(t / 5000) * 0.98) / 2)
-    const delta = 10
+    const camera = new PerspectiveCamera(
+      CAM_FOV, // Field of view
+      IMG_WIDTH / IMG_HEIGHT, // Aspect ratio
+      0.1, // Near clipping plane
+      1000 // Far clipping plane
+    );
+    camera.position.y = CAM_HEIGHT;
+    camera.rotation.x = CAM_ANGLE;
+    camBox.add(camera)
+
+    const renderer = new WebGLRenderer();
+    renderer.setClearColor(0xf0f0d0, 1);
+    renderer.setSize(
+      IMG_WIDTH,
+      IMG_HEIGHT,
+      document.body.appendChild(renderer.domElement)
+    );
+
+    const pos = t => ((1 - Math.cos(t / 7500)) / 2) // Project time [0,inf) to [0-1].
+    const noise = t => Math.sin(t / 200) * 3 + Math.cos(t * Math.E / 500) * 4
     function animate(t) {
       const pos1 = lane(pos(t));
-      const pos2 = lane(pos(t + delta))
-      const direction = pos2.sub(pos1);
-      const theta = Math.atan2(direction.x, direction.y);
+      const pos2 = lane(pos(t - 100));
 
-      if (0) {
-        cube.position.set(pos1.x, 10, pos1.y);
-        cube.rotation.y = theta + Math.PI;
-        camera.lookAt(pos1.x, 0, pos1.y)
-      } else {
-        camera.position.set(pos1.x, 10, pos1.y);
-        camera.lookAt(pos2.x, 10 - delta / 100, pos2.y)
-      }
+      // Follow main path
+      camBox.position.set(pos1.x, 0, pos1.y);
+      camBox.lookAt(pos2.x, 0, pos2.y)
+
+      // Add noise
+      camera.position.x = noise(t)
 
       renderer.render(scene, camera);
       requestAnimationFrame(animate);
