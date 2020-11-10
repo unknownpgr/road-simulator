@@ -345,8 +345,13 @@
     // Generate dataset
     let i = 0;
     let t = 0;
+    let baseTime = -1;
     function animate(t_) {
-      if (!isSave) t = t_ / 40000;
+      if (baseTime <= 0) {
+        baseTime = t_;
+        console.log(baseTime)
+      };
+      if (!isSave) t = (t_ - baseTime) / 40000;
       const pos1 = lane(t);
       const pos2 = lane(t + 0.01);
 
