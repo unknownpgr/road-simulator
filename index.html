@@ -62,8 +62,8 @@
     const IMG_WIDTH = 320;
     const IMG_HEIGHT = 240;
     const CAM_HEIGHT = 10; // Unit : cm
-    const CAM_ANGLE = 0; // Unit : rad
-    const CAM_FOV = 30; // Unit : degree
+    const CAM_ANGLE = -Math.PI / 8; // Unit : rad
+    const CAM_FOV = 45; // Unit : degree
 
     let isSave = false;
 
@@ -321,18 +321,17 @@
     composer.addPass(savePass);
     composer.addPass(outputPass);
 
-    const posNoise = t => Math.sin(t * 50 * Math.PI * Math.E) * 3 + Math.cos(t * Math.E * 100) * 4
-    const angleNoise = t => (Math.sin(t * Math.E * 70) + Math.cos(t * Math.PI * 80)) * Math.PI / 36;
+    const rand = [Math.random(), Math.random(), Math.random(), Math.random()];
+
+    const posNoise = t => Math.sin(t * (40 + rand[0] * 20) * 7) * 4 + Math.cos(t * (65 + rand[1] * 25) * 3) * 3 // Max = 7
+    const angleNoise = t => (Math.sin(t * (20 + rand[2] * 10) * 3) + Math.cos(t * (20 + rand[3] * 20) * 3)) * Math.PI / 12;
 
     // Generate dataset
     let i = 0;
     let t = 0;
     let baseTime = -1;
     function animate(t_) {
-      if (baseTime <= 0) {
-        baseTime = t_;
-        console.log(baseTime)
-      };
+      if (baseTime <= 0) baseTime = t_;
       if (!isSave) t = (t_ - baseTime) / 40000;
       const pos1 = lane(t);
       const pos2 = lane(t + 0.01);
@@ -341,11 +340,11 @@
       camBox.position.set(pos2.x, 0, pos2.y);
       camBox.lookAt(pos1.x, 0, pos1.y)
 
-      // Add posNoise
+      // Add noise on position and angle
       let pN = posNoise(t);
       let aN = angleNoise(t);
       camera.position.x = pN;
-      camera.rotation.y = aN;
+      camBox.rotation.y += aN;
 
       // Add texture noise
       customPass.uniforms['amount'].value = t % 1;
