@@ -27,13 +27,19 @@ In this section, You will probably realize that the simulated image is a bit yel
 Below are some result from the simulation.
 
 ![](imgs/sim/sim1.png)
+
 ![](imgs/sim/sim2.png)
+
 ![](imgs/sim/sim3.png)
+
+
 
 ## Real-World Result
 
 Below are real some images from camera (on toy car).
 
 ![screenshot-255](imgs/real/screenshot-255.jpg)
+
 ![screenshot-20](imgs/real/screenshot-20.jpg)
+
 ![screenshot-140](imgs/real/screenshot-140.jpg)
