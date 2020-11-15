@@ -18,11 +18,11 @@ Since this project was created using `WebGL`+`THREE.js`, you can apply almost an
 
 ...And everything you can imagine.
 
-# Comparation
+## Comparation
 
 In this section, You will probably realize that the simulated image is a bit yellow and noisy. This makes it difficult to distinguish between the background and the lane. I intended it so that the AI trained with this dataset will work well in environments where lanes and backgrounds are confusing.
 
-## Simulation Result
+### Simulation Result
 
 Below are some result from the simulation.
 
@@ -34,7 +34,7 @@ Below are some result from the simulation.
 
 
 
-## Real-World Result
+### Real-World Result
 
 Below are real some images from camera (on toy car).
 
@@ -43,3 +43,15 @@ Below are real some images from camera (on toy car).
 ![screenshot-20](imgs/real/screenshot-20.jpg)
 
 ![screenshot-140](imgs/real/screenshot-140.jpg)
+
+## Project Structure
+
+- `index.js` : Node.js server, receive generated image and statically serve files.
+- `dataset` : Generated images will be saved in this directory. The default save path is `dataset/imgs`.
+- `traning/preprocessor.py` : Generate csv dataset file from data in `dataset` directory.
+
+## Requirements
+
+- `Node.js`
+- `Python`, `OpenCV` (only for preprocessing, not required for just data generating.)
+- Modern browser such as `Chrome`.
