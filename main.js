@@ -1,4 +1,4 @@
-import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/r123/three.module.js";
+import * as THREE from "./three.js-dev/build/three.module.js";
 import { ShaderBlur } from "./shaders/ShaderBlur.js";
 import { ShaderConcat } from "./shaders/ShaderConcat.js";
 import Vec2D from './vec2d.js';
