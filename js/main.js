@@ -231,7 +231,7 @@ let lane;
     });
   }
 
-  let [human, laptop] = await Promise.all([loadObj('human.obj'), loadObj('laptop.obj')]);
+  let [human, laptop] = await Promise.all([loadObj('../objects/human.obj'), loadObj('../objects/laptop.obj')]);
 
   human.position.set(250, 0, 0);
   setMaterial(human, customMaterial);
