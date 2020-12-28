@@ -2,7 +2,7 @@
  * Blend two textures
  */
 
-var CustomShader = {
+let CustomShader = {
 
   uniforms: {
     "tDiffuse1": { value: null },
