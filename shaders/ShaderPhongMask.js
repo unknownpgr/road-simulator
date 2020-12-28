@@ -57,7 +57,8 @@ uniform vec3 specular;
 uniform float shininess;
 uniform float opacity;
 
-uniform vec4 mask;
+uniform vec3 mask;
+uniform float useMask;
 
 #include <common>
 #include <packing>
@@ -85,34 +86,37 @@ uniform vec4 mask;
 #include <clipping_planes_pars_fragment>
 void main() {
 	#include <clipping_planes_fragment>
-	vec4 diffuseColor = vec4( diffuse, opacity );
-	ReflectedLight reflectedLight = ReflectedLight( vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ) );
-	vec3 totalEmissiveRadiance = emissive;
-	#include <logdepthbuf_fragment>
-	#include <map_fragment>
-	#include <color_fragment>
-	#include <alphamap_fragment>
-	#include <alphatest_fragment>
-	#include <specularmap_fragment>
-	#include <normal_fragment_begin>
-	#include <normal_fragment_maps>
-	#include <emissivemap_fragment>
-	// accumulation
-	#include <lights_phong_fragment>
-	#include <lights_fragment_begin>
-	#include <lights_fragment_maps>
-	#include <lights_fragment_end>
-	// modulation
-	#include <aomap_fragment>
-	vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + reflectedLight.directSpecular + reflectedLight.indirectSpecular + totalEmissiveRadiance;
-	#include <envmap_fragment>
-	gl_FragColor = vec4( outgoingLight, diffuseColor.a );
-	gl_FragColor = vec4( (glPos.x/glPos.w+1.0)/2.0,0,0 ,1);
-	#include <tonemapping_fragment>
-	#include <encodings_fragment>
-	#include <fog_fragment>
-	#include <premultiplied_alpha_fragment>
-	#include <dithering_fragment>
+	if(useMask>0.0){
+		gl_FragColor = vec4(mask.x,mask.y,mask.z,1);
+	}else{
+		vec4 diffuseColor = vec4( diffuse, opacity );
+		ReflectedLight reflectedLight = ReflectedLight( vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ) );
+		vec3 totalEmissiveRadiance = emissive;
+		#include <logdepthbuf_fragment>
+		#include <map_fragment>
+		#include <color_fragment>
+		#include <alphamap_fragment>
+		#include <alphatest_fragment>
+		#include <specularmap_fragment>
+		#include <normal_fragment_begin>
+		#include <normal_fragment_maps>
+		#include <emissivemap_fragment>
+		// accumulation
+		#include <lights_phong_fragment>
+		#include <lights_fragment_begin>
+		#include <lights_fragment_maps>
+		#include <lights_fragment_end>
+		// modulation
+		#include <aomap_fragment>
+		vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + reflectedLight.directSpecular + reflectedLight.indirectSpecular + totalEmissiveRadiance;
+		#include <envmap_fragment>
+		gl_FragColor = vec4( outgoingLight, diffuseColor.a );
+		#include <tonemapping_fragment>
+		#include <encodings_fragment>
+		#include <fog_fragment>
+		#include <premultiplied_alpha_fragment>
+		#include <dithering_fragment>
+	}
 }
 `
 };

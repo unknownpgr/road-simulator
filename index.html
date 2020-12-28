@@ -25,7 +25,8 @@
 <body>
   <script type="module">
     import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/r123/three.module.js"
-    import { CustomShader } from "./shaders/ShaderPost.js"
+    import { ShaderBlur } from "./shaders/ShaderBlur.js"
+    import { ShaderConcat } from "./shaders/ShaderConcat.js"
     import Vec2D from './vec2d.js';
     import createThickLine from "./thick.js"
 
@@ -38,8 +39,8 @@
     import shaderPhongMask from "./shaders/ShaderPhongMask.js"
 
     // Define constants
-    const IMG_WIDTH = 640;
-    const IMG_HEIGHT = 480;
+    const IMG_WIDTH = 320;
+    const IMG_HEIGHT = 240;
     const CAM_HEIGHT = 10; // Unit : cm
     const CAM_ANGLE = -Math.PI / 8; // Unit : rad
     const CAM_FOV = 45; // Unit : degree
@@ -81,8 +82,20 @@
       return geometry;
     }
 
-    function CustomMaterial(color = '#ff0000', mask = { x: 1, y: 0, z: 0, w: 0 }) {
-      return new THREE.ShaderMaterial({
+    let customMaterials = []
+
+    function setUseMask(use) {
+      customMaterials.forEach(mat => {
+        if (use)
+          mat.uniforms.useMask.value = 1;
+        else
+          mat.uniforms.useMask.value = 0;
+        mat.needsUpdate = true;
+      })
+    }
+
+    function getCustomMaterial(color = '#ff0000', mask = '#000000') {
+      const mat = new THREE.ShaderMaterial({
         uniforms: THREE.UniformsUtils.merge([
           THREE.ShaderLib.phong.uniforms,
           {
@@ -91,7 +104,8 @@
             specular: { value: new THREE.Color('#111111') },
             shineness: { value: 30 },
             opacity: { value: 1 },
-            mask
+            mask: { type: "c", value: new THREE.Color(mask) },
+            useMask: { value: 0 }
           },
         ]),
         vertexShader: shaderPhongMask.vert,
@@ -99,6 +113,9 @@
         lights: true,
         transparent: true,
       });
+      customMaterials.push(mat);
+
+      return mat
     }
 
     // Crate lane geometry
@@ -159,8 +176,7 @@
     let ground;
     {
       const geometry = new THREE.PlaneGeometry(1000, 1000);
-      // const material = new THREE.MeshPhongMaterial({ color: 0x101010, side: THREE.DoubleSide });
-      const material = CustomMaterial('#101010', '#101010')
+      const material = getCustomMaterial('#101010', '#000000')
       ground = new THREE.Mesh(geometry, material);
       ground.position.set(0, -0.1, 0)
       ground.lookAt(0, 1, 0)
@@ -183,8 +199,7 @@
         points.push(lane(t))
       }
       let [leftLaneGeometry, rightLaneGeometry] = getLaneGeometry(points, 40, 1.8);
-      // let material = new THREE.MeshPhongMaterial({ color: 0xffff40, side: THREE.DoubleSide })
-      const material = CustomMaterial('#ffff40', '#ffff40')
+      const material = getCustomMaterial('#ffff40', '#ffffff')
       let leftLane = new THREE.Mesh(leftLaneGeometry, material);
       let rightLane = new THREE.Mesh(rightLaneGeometry, material);
       scene.add(leftLane);
@@ -220,64 +235,65 @@
       }
     }
 
-    // Load object
-    {
+    // Load objects asynchronously 
+    (async () => {
       // instantiate a loader
       const loader = new OBJLoader();
+      const customMaterial = getCustomMaterial('#404040', '#808080');
 
-      // Load human object
-      loader.load(
-        'human.obj',
-        function (object) {
-          object.position.set(250, 0, 0)
-          object.traverse(function (child) {
-            if (child instanceof THREE.Mesh) {
-              child.material.color.set(0x404040);
-            }
-          });
-          scene.add(object);
-        });
-
-      // Load laptop object
-      loader.load(
-        'laptop.obj',
-        function (object) {
-          object.position.set(249, 9, 0)
-          object.rotation.y = Math.PI;
-          object.scale.set(0.2, 0.2, 0.2)
-          object.traverse(function (child) {
-            if (child instanceof THREE.Mesh) {
-              child.material.color.set(0x202020);
-            }
-          });
-          scene.add(object);
-
-          let buttonShow = document.createElement('button')
-          let buttonSave = document.createElement('button')
-
-          buttonShow.innerText = 'Just run simulation (available on GitHub)'
-          buttonSave.innerText = 'Run simulation and save the result (Receiver server required, not available on GitHub.)'
-
-          buttonShow.onclick = () => {
-            isSave = false;
-            animate(0);
-            document.body.removeChild(buttonSave)
-            document.body.removeChild(buttonShow)
+      function setMaterial(object, material) {
+        object.traverse(function (child) {
+          if (child.material) {
+            child.material = material;
           }
-
-          buttonSave.onclick = () => {
-            isSave = true;
-            animate();
-            document.body.removeChild(buttonSave)
-            document.body.removeChild(buttonShow)
-          }
-
-          document.body.appendChild(buttonShow);
-          document.body.appendChild(buttonSave);
         });
-    }
+      }
 
-    let camBox = new THREE.Object3D()
+      function loadObj(fileName) {
+        return new Promise((res, rej) => {
+          loader.load(
+            fileName,
+            res);
+        })
+      }
+
+      let [human, laptop] = await Promise.all([loadObj('human.obj'), loadObj('laptop.obj')])
+
+      human.position.set(250, 0, 0)
+      setMaterial(human, customMaterial);
+      scene.add(human);
+
+      laptop.position.set(249, 9, 0)
+      laptop.rotation.y = Math.PI;
+      laptop.scale.set(0.2, 0.2, 0.2)
+      setMaterial(laptop, customMaterial);
+      scene.add(laptop);
+
+      let buttonShow = document.createElement('button')
+      let buttonSave = document.createElement('button')
+
+      buttonShow.innerText = 'Just run simulation (available on GitHub)'
+      buttonSave.innerText = 'Run simulation and save the result (Receiver server required, not available on GitHub.)'
+
+      buttonShow.onclick = () => {
+        isSave = false;
+        animate(0);
+        document.body.removeChild(buttonSave)
+        document.body.removeChild(buttonShow)
+      }
+
+      buttonSave.onclick = () => {
+        isSave = true;
+        animate();
+        document.body.removeChild(buttonSave)
+        document.body.removeChild(buttonShow)
+      }
+
+      document.body.appendChild(buttonShow);
+      document.body.appendChild(buttonSave);
+    })()
+
+    const camBox = new THREE.Object3D()
     scene.add(camBox)
 
     const camera = new THREE.PerspectiveCamera(
@@ -294,51 +310,91 @@
     renderer.setClearColor(0xf0f0d0, 1);
     renderer.setSize(
       IMG_WIDTH,
-      IMG_HEIGHT,
+      IMG_HEIGHT * 2,
       document.body.appendChild(renderer.domElement)
     );
-
     /**
-     * Used to implement post-processing effects in three.js.
+     * Composers are used to implement post-processing effects in three.js.
      * The class manages a chain of post-processing passes to produce the final visual result.
      * Post-processing passes are executed in order of their addition/insertion.
      * The last pass is automatically rendered to screen.
      */
-    const composer = new EffectComposer(renderer);
 
-    // Render pass
-    const renderPass = new RenderPass(scene, camera);
-    const renderTargetParameters = {
+    function getBlurComposer(renderer, renderTarget) {
+      /**
+       * This composer Implements motion blur by blending renderTarget and current frame.
+       * The processed result will NOT be rendered on canvas, and will be rendered on renderTarget.
+       * Therefore, this composer can be thought that updates render target by blending it with
+       * current frame from camera.
+       */
+      const composer = new EffectComposer(renderer);
+
+      // Render pass
+      const renderPass = new RenderPass(scene, camera);
+
+      // Save pass
+      const savePass = new SavePass(renderTarget);
+
+      // Blend Pass
+      const customPass = new ShaderPass(ShaderBlur, 'tDiffuse1');
+      customPass.uniforms['tDiffuse2'].value = renderTarget;
+      customPass.uniforms['mixRatio'].value = 0.5;
+      customPass.uniforms['amount'].value = 0;
+
+      // Compose passes
+      composer.addPass(renderPass);
+      composer.addPass(customPass);
+      composer.addPass(savePass);
+
+      return (randomSeed) => {
+        // Add texture noise
+        customPass.uniforms['amount'].value = randomSeed % 1;
+        composer.render();
+      };
+    }
+
+    function getConcatComposer(renderer, secondImage) {
+      /**
+       * This composer just concatenates two diffrent image vertically.
+       * The first one is frame from camera, and the second one is secondImage.
+       */
+
+      const composer = new EffectComposer(renderer);
+
+      // Render pass
+      const renderPass = new RenderPass(scene, camera);
+
+      // Concat Pass
+      const customPass = new ShaderPass(ShaderConcat, 'tDiffuse1');
+      customPass.uniforms['tDiffuse2'].value = secondImage;
+
+      // Output pass
+      const outputPass = new ShaderPass(CopyShader);
+      outputPass.renderToScreen = true;
+
+      // Compose passes
+      composer.addPass(renderPass);
+      composer.addPass(customPass);
+      composer.addPass(outputPass);
+
+      return () => {
+        composer.render();
+      };
+    }
+
+    let renderTarget = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, {
       minFilter: THREE.LinearFilter,
       magFilter: THREE.LinearFilter,
       stencilBuffer: false
-    };
-
-    // Save pass
-    // 
-    const savePass = new SavePass(new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, renderTargetParameters));
-
-    // Blend Pass
-    const customPass = new ShaderPass(CustomShader, 'tDiffuse1');
-    customPass.uniforms['tDiffuse2'].value = savePass.renderTarget.texture;
-    customPass.uniforms['mixRatio'].value = 0.5;
-    customPass.uniforms['amount'].value = 0;
-
-    // Output pass
-    const outputPass = new ShaderPass(CopyShader);
-    outputPass.renderToScreen = true;
-
-    // Compose passes
-    composer.addPass(renderPass);
-    composer.addPass(customPass);
-    composer.addPass(savePass);
-    composer.addPass(outputPass);
+    })
+    let blurComposerRender = getBlurComposer(renderer, renderTarget);
+    let concatComposerRender = getConcatComposer(renderer, renderTarget);
 
     const rand = [Math.random(), Math.random(), Math.random(), Math.random()];
 
     const posNoise = t => Math.sin(t * (40 + rand[0] * 20) * 7) * 4 + Math.cos(t * (65 + rand[1] * 25) * 3) * 3 // Max = 7
     const angleNoise = t => (Math.sin(t * (20 + rand[2] * 10) * 3) + Math.cos(t * (20 + rand[3] * 20) * 3)) * Math.PI / 24;
-    const anlgeNoise2 = t => (Math.sin(t * (20 + rand[3] * 10) * 3) + Math.cos(t * (20 + rand[2] * 20) * 3)) * Math.PI / 48;
+    const angleNoise2 = t => (Math.sin(t * (20 + rand[3] * 10) * 3) + Math.cos(t * (20 + rand[2] * 20) * 3)) * Math.PI / 48;
 
     // Generate dataset
     let i = 0;
@@ -359,11 +415,12 @@
       let aN = angleNoise(t);
       camera.position.x = pN;
       camBox.rotation.y += aN;
-      camera.rotation.x = CAM_ANGLE + anlgeNoise2(t);
+      camera.rotation.x = CAM_ANGLE + angleNoise2(t);
 
-      // Add texture noise
-      customPass.uniforms['amount'].value = t % 1;
-      composer.render();
+      setUseMask(false);
+      blurComposerRender(t);
+      setUseMask(true);
+      concatComposerRender();
 
       // Send rendered image to server
       if (isSave) {

@@ -2,13 +2,12 @@
  * Blend two textures
  */
 
-let CustomShader = {
+let ShaderBlur = {
 
   uniforms: {
     "tDiffuse1": { value: null },
     "tDiffuse2": { value: null },
     "mixRatio": { value: 0.5 },
-    "opacity": { value: 1.0 },
     "amount": { value: 0 }
   },
 
@@ -37,16 +36,16 @@ let CustomShader = {
     float random( vec2 p )
     {
       vec2 K1 = vec2(
-        23.14069263277926, // e^pi (Gelfond's constant)
-        2.665144142690225 // 2^sqrt(2) (Gelfondâ€“Schneider constant)
+        23.14069263277926,
+        2.665144142690225
       );
-      return fract( cos( dot(p,K1) ) * 12345.6789 );
+      return fract( cos( dot(p,K1) ) * 12345.6789 )-0.5;
     }
 
     void main() {
     	vec4 texel1 = texture2D( tDiffuse1, vUv );
       vec4 texel2 = texture2D( tDiffuse2, vUv );
-      vec4 color = opacity * mix( texel1, texel2, mixRatio );
+      vec4 color = mix( texel1, texel2, mixRatio );
       vec2 uvRandom = vUv;
       uvRandom.y *= random(vec2(uvRandom.y,amount));
       color.rgb += random(uvRandom)*0.08;
@@ -55,4 +54,4 @@ let CustomShader = {
     `
 };
 
-export { CustomShader };
+export { ShaderBlur };
