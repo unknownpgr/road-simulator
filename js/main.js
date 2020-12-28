@@ -255,7 +255,7 @@ let lane;
  * The last pass is automatically rendered to screen.
  */
 
-function getBlurComposer(renderer, renderTarget) {
+function getBlurComposer(renderer, renderTarget, clearColor) {
   /**
    * This composer Implements motion blur by blending renderTarget and current frame.
    * The processed result will NOT be rendered on canvas, and will be rendered on renderTarget.
@@ -283,12 +283,13 @@ function getBlurComposer(renderer, renderTarget) {
 
   return (randomSeed) => {
     // Add texture noise
+    renderer.setClearColor(clearColor);
     customPass.uniforms['amount'].value = randomSeed % 1;
     composer.render();
   };
 }
 
-function getConcatComposer(renderer, secondImage) {
+function getConcatComposer(renderer, secondImage, clearColor) {
   /**
    * This composer just concatenates two diffrent image vertically.
    * The first one is frame from camera, and the second one is secondImage.
@@ -313,6 +314,7 @@ function getConcatComposer(renderer, secondImage) {
   composer.addPass(outputPass);
 
   return () => {
+    renderer.setClearColor(clearColor);
     composer.render();
   };
 }
@@ -320,7 +322,6 @@ function getConcatComposer(renderer, secondImage) {
 let blurComposerRender, concatComposerRender;
 {
   const renderer = new THREE.WebGLRenderer();
-  renderer.setClearColor(0xf0f0d0, 1);
   renderer.setSize(
     IMG_WIDTH,
     IMG_HEIGHT * 2,
@@ -332,8 +333,8 @@ let blurComposerRender, concatComposerRender;
     magFilter: THREE.LinearFilter,
     stencilBuffer: false
   });
-  blurComposerRender = getBlurComposer(renderer, renderTarget);
-  concatComposerRender = getConcatComposer(renderer, renderTarget);
+  blurComposerRender = getBlurComposer(renderer, renderTarget, 0xf0f0d0);
+  concatComposerRender = getConcatComposer(renderer, renderTarget, 0x404040);
 }
 
 // ================================================================
