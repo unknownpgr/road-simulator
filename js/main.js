@@ -1,8 +1,7 @@
 import * as THREE from "./three.js-dev/build/three.module.js";
 import { ShaderBlur } from "./shaders/ShaderBlur.js";
 import { ShaderConcat } from "./shaders/ShaderConcat.js";
-import Vec2D from './vec2d.js';
-import createThickLine from "./thick.js";
+import { createThickLine, getPathFunction } from "./curves.js";
 
 import { OBJLoader } from "./three.js-dev/examples/jsm/loaders/OBJLoader.js";
 import { EffectComposer } from "./three.js-dev/examples/jsm/postprocessing/EffectComposer.js";
@@ -19,42 +18,27 @@ const CAM_HEIGHT = 10; // Unit : cm
 const CAM_ANGLE = -Math.PI / 8; // Unit : rad
 const CAM_FOV = 45; // Unit : degree
 
-let isSave = false;
+let useSaveServer = false;
 
 // Define scene, camera, renderer.
 const scene = new THREE.Scene();
-
-// Get 'geometry' of thick line. Parameter should be array of Vec2D generated from createThickLine.
-function getThickLineGeometry([left, right]) {
-  const n = left.length;
-  let vertices = [];
-  let faces = [];
-
-  for (let i = 0; i < n; i++) {
-    vertices.push(new THREE.Vector3(left[i].x, 0, left[i].y));
-    vertices.push(new THREE.Vector3(right[i].x, 0, right[i].y));
-  }
-
-  for (let i = 0; i < n - 1; i++) {
-    faces.push(new THREE.Face3(
-      i * 2 + 2,
-      i * 2 + 1,
-      i * 2 + 0));
-    faces.push(new THREE.Face3(
-      i * 2 + 3,
-      i * 2 + 1,
-      i * 2 + 2));
-  }
-
-  const geometry = new THREE.Geometry();
-  geometry.vertices = vertices;
-  geometry.faces = faces;
-  geometry.computeBoundingSphere();
-  geometry.computeFaceNormals();
-  geometry.computeVertexNormals();
-
-  return geometry;
+const camBox = new THREE.Object3D();
+const camera = new THREE.PerspectiveCamera(
+  CAM_FOV, // Field of view
+  IMG_WIDTH / IMG_HEIGHT, // Aspect ratio
+  0.1, // Near clipping plane
+  1000 // Far clipping plane
+);
+{
+  camera.position.y = CAM_HEIGHT;
+  camera.rotation.x = CAM_ANGLE;
+  camBox.add(camera);
+  scene.add(camBox);
 }
+
+// ================================================================
+//     Custom material (mask-able material)
+// ================================================================
 
 let customMaterials = [];
 
@@ -92,6 +76,42 @@ function getCustomMaterial(color = '#ff0000', mask = '#000000') {
   return mat;
 }
 
+// ================================================================
+//     Geometry
+// ================================================================
+
+// Get 'geometry' of thick line. Parameter should be array of Vec2D generated from createThickLine.
+function getThickLineGeometry([left, right]) {
+  const n = left.length;
+  let vertices = [];
+  let faces = [];
+
+  for (let i = 0; i < n; i++) {
+    vertices.push(new THREE.Vector3(left[i].x, 0, left[i].y));
+    vertices.push(new THREE.Vector3(right[i].x, 0, right[i].y));
+  }
+
+  for (let i = 0; i < n - 1; i++) {
+    faces.push(new THREE.Face3(
+      i * 2 + 2,
+      i * 2 + 1,
+      i * 2 + 0));
+    faces.push(new THREE.Face3(
+      i * 2 + 3,
+      i * 2 + 1,
+      i * 2 + 2));
+  }
+
+  const geometry = new THREE.Geometry();
+  geometry.vertices = vertices;
+  geometry.faces = faces;
+  geometry.computeBoundingSphere();
+  geometry.computeFaceNormals();
+  geometry.computeVertexNormals();
+
+  return geometry;
+}
+
 // Crate lane geometry
 function getLaneGeometry(points, width = 2, thick = 0.1) {
   let [leftLanePoints, rightLanePoints] = createThickLine(points, width);
@@ -100,50 +120,6 @@ function getLaneGeometry(points, width = 2, thick = 0.1) {
   let leftLaneGeometry = getThickLineGeometry(leftLane);
   let rightLaneGeometry = getThickLineGeometry(rightLane);
   return [leftLaneGeometry, rightLaneGeometry];
-}
-
-// Get path function from segments
-function getPathFunction(segments) {
-  // 'segments' is a list of tuples <radius, anlge(length)>.
-  // If radius <= 0, then the given segment is regarded as a line with given length.
-  // Else, the given segment is regarded as a arc with given radius and angle.
-
-  let angle = 0;
-  let pos1 = new Vec2D(0, 0);
-  let pathFunctions = [];
-  let segmentLengthes = [0];
-  let totalLength = 0;
-
-  segments.forEach(segment => {
-    const a = angle; // Copy variable so that it would be immutable.
-    const p = pos1.clone();
-    if (segment[0] <= 0) {
-      // Line segment
-      pathFunctions.push(t => new Vec2D(Math.cos(a), Math.sin(a)).mul(segment[1] * t).add(p));
-      totalLength += segment[1];
-    } else {
-      // Curve segment
-      pathFunctions.push(t => new Vec2D(Math.cos(segment[1] * t) - 1, Math.sin(segment[1] * t)).rot(a - Math.sign(segment[1]) * Math.PI / 2).mul(segment[0]).add(p));
-      totalLength += Math.abs(segment[0] * segment[1]);
-      angle += segment[1];
-    }
-    pos1 = pathFunctions[pathFunctions.length - 1](1);
-    segmentLengthes.push(totalLength);
-  });
-
-  return x => {
-    let t = x * totalLength;
-    let i;
-    for (i = 0; i < pathFunctions.length; i++) {
-      if (segmentLengthes[i] <= t && t <= segmentLengthes[i + 1]) {
-        let sgementT = (t - segmentLengthes[i]) / (segmentLengthes[i + 1] - segmentLengthes[i]);
-        return pathFunctions[i](sgementT);
-      }
-    }
-    i--;
-    let sgementT = (t - segmentLengthes[i]) / (segmentLengthes[i + 1] - segmentLengthes[i]);
-    return pathFunctions[i](sgementT);
-  };
 }
 
 // Define ground
@@ -250,14 +226,14 @@ let lane;
   buttonSave.innerText = 'Run simulation and save the result (Receiver server required, not available on GitHub.)';
 
   buttonShow.onclick = () => {
-    isSave = false;
+    useSaveServer = false;
     animate(0);
     document.body.removeChild(buttonSave);
     document.body.removeChild(buttonShow);
   };
 
   buttonSave.onclick = () => {
-    isSave = true;
+    useSaveServer = true;
     animate();
     document.body.removeChild(buttonSave);
     document.body.removeChild(buttonShow);
@@ -267,26 +243,11 @@ let lane;
   document.body.appendChild(buttonSave);
 })();
 
-const camBox = new THREE.Object3D();
-scene.add(camBox);
+// ================================================================
+//     Renderers, Effect composers
+// ================================================================
 
-const camera = new THREE.PerspectiveCamera(
-  CAM_FOV, // Field of view
-  IMG_WIDTH / IMG_HEIGHT, // Aspect ratio
-  0.1, // Near clipping plane
-  1000 // Far clipping plane
-);
-camera.position.y = CAM_HEIGHT;
-camera.rotation.x = CAM_ANGLE;
-camBox.add(camera);
 
-const renderer = new THREE.WebGLRenderer();
-renderer.setClearColor(0xf0f0d0, 1);
-renderer.setSize(
-  IMG_WIDTH,
-  IMG_HEIGHT * 2,
-  document.body.appendChild(renderer.domElement)
-);
 /**
  * Composers are used to implement post-processing effects in three.js.
  * The class manages a chain of post-processing passes to produce the final visual result.
@@ -356,48 +317,61 @@ function getConcatComposer(renderer, secondImage) {
   };
 }
 
-let renderTarget = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, {
-  minFilter: THREE.LinearFilter,
-  magFilter: THREE.LinearFilter,
-  stencilBuffer: false
-});
-let blurComposerRender = getBlurComposer(renderer, renderTarget);
-let concatComposerRender = getConcatComposer(renderer, renderTarget);
+let blurComposerRender, concatComposerRender;
+{
+  const renderer = new THREE.WebGLRenderer();
+  renderer.setClearColor(0xf0f0d0, 1);
+  renderer.setSize(
+    IMG_WIDTH,
+    IMG_HEIGHT * 2,
+    document.body.appendChild(renderer.domElement)
+  );
+
+  let renderTarget = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, {
+    minFilter: THREE.LinearFilter,
+    magFilter: THREE.LinearFilter,
+    stencilBuffer: false
+  });
+  blurComposerRender = getBlurComposer(renderer, renderTarget);
+  concatComposerRender = getConcatComposer(renderer, renderTarget);
+}
+
+// ================================================================
+//     Real time render processes
+// ================================================================
 
 const rand = [Math.random(), Math.random(), Math.random(), Math.random()];
-
 const posNoise = t => Math.sin(t * (40 + rand[0] * 20) * 7) * 4 + Math.cos(t * (65 + rand[1] * 25) * 3) * 3; // Max = 7
 const angleNoise = t => (Math.sin(t * (20 + rand[2] * 10) * 3) + Math.cos(t * (20 + rand[3] * 20) * 3)) * Math.PI / 24;
 const angleNoise2 = t => (Math.sin(t * (20 + rand[3] * 10) * 3) + Math.cos(t * (20 + rand[2] * 20) * 3)) * Math.PI / 48;
 
 // Generate dataset
-let i = 0;
-let t = 0;
+let time = 0;
 let baseTime = -1;
 function animate(t_) {
   if (baseTime <= 0) baseTime = t_;
-  if (!isSave) t = (t_ - baseTime) / 40000;
-  const pos1 = lane(t);
-  const pos2 = lane(t + 0.02);
+  if (!useSaveServer) time = (t_ - baseTime) / 40000;
+  const pos1 = lane(time);
+  const pos2 = lane(time + 0.02);
 
   // Follow main path
   camBox.position.set(pos2.x, 0, pos2.y);
   camBox.lookAt(pos1.x, 0, pos1.y);
 
   // Add noise on position and angle
-  let pN = posNoise(t);
-  let aN = angleNoise(t);
+  let pN = posNoise(time);
+  let aN = angleNoise(time);
   camera.position.x = pN;
   camBox.rotation.y += aN;
-  camera.rotation.x = CAM_ANGLE + angleNoise2(t);
+  camera.rotation.x = CAM_ANGLE + angleNoise2(time);
 
   setUseMask(false);
-  blurComposerRender(t);
+  blurComposerRender(time);
   setUseMask(true);
   concatComposerRender();
 
   // Send rendered image to server
-  if (isSave) {
+  if (useSaveServer) {
     let data = renderer.domElement.toDataURL('image/png');
     data = data.replace('data:image/png;base64', pN + '_' + aN + '.png');
     fetch("save/",
@@ -406,16 +380,15 @@ function animate(t_) {
         headers: { 'content-type': 'text/html' },
         method: "POST"
       }).then(() => {
-        if (t < 0.9) {
-          t += 0.001;
-          i++;
+        if (time < 0.9) {
+          time += 0.001;
           setTimeout(animate, 0);
         } else {
           document.body.innerHTML = '<h1>Simulation Finished</h1>';
         }
       });
   } else {
-    if (t < 0.9) { requestAnimationFrame(animate); }
+    if (time < 0.9) { requestAnimationFrame(animate); }
     else {
       document.body.innerHTML = '<h1>Simulation Finished</h1>';
     }
