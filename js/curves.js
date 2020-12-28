@@ -38,7 +38,7 @@ function getPathFunction(segments) {
      * `x` is position in curve. The range of x must be in [0,1].
      * t is global position in curve.
      */
-    if (x < 0) t = 0;
+    if (x < 0) x = 0;
     if (x > 1) x = 1;
     let t = x * totalLength;
     let i;
