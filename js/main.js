@@ -209,38 +209,44 @@ let lane;
 
   let [human, laptop] = await Promise.all([loadObj('./objects/human.obj'), loadObj('./objects/laptop.obj')]);
 
-  human.position.set(250, 0, 0);
-  setMaterial(human, customMaterial);
-  scene.add(human);
+  {
+    human.position.set(250, 0, 0);
+    setMaterial(human, customMaterial);
+    scene.add(human);
+  }
 
-  laptop.position.set(249, 9, 0);
-  laptop.rotation.y = Math.PI;
-  laptop.scale.set(0.2, 0.2, 0.2);
-  setMaterial(laptop, customMaterial);
-  scene.add(laptop);
+  {
+    laptop.position.set(249, 9, 0);
+    laptop.rotation.y = Math.PI;
+    laptop.scale.set(0.2, 0.2, 0.2);
+    setMaterial(laptop, customMaterial);
+    scene.add(laptop);
+  }
 
-  let buttonShow = document.createElement('button');
-  let buttonSave = document.createElement('button');
+  {
+    let buttonShow = document.createElement('button');
+    let buttonSave = document.createElement('button');
 
-  buttonShow.innerText = 'Just run simulation (available on GitHub)';
-  buttonSave.innerText = 'Run simulation and save the result (Receiver server required, not available on GitHub.)';
+    buttonShow.innerText = 'Just run simulation (available on GitHub)';
+    buttonSave.innerText = 'Run simulation and save the result (Receiver server required, not available on GitHub.)';
 
-  buttonShow.onclick = () => {
-    useSaveServer = false;
-    animate(0);
-    document.body.removeChild(buttonSave);
-    document.body.removeChild(buttonShow);
-  };
+    buttonShow.onclick = () => {
+      useSaveServer = false;
+      animate(0);
+      document.body.removeChild(buttonSave);
+      document.body.removeChild(buttonShow);
+    };
 
-  buttonSave.onclick = () => {
-    useSaveServer = true;
-    animate();
-    document.body.removeChild(buttonSave);
-    document.body.removeChild(buttonShow);
-  };
+    buttonSave.onclick = () => {
+      useSaveServer = true;
+      animate();
+      document.body.removeChild(buttonSave);
+      document.body.removeChild(buttonShow);
+    };
 
-  document.body.appendChild(buttonShow);
-  document.body.appendChild(buttonSave);
+    document.body.appendChild(buttonShow);
+    document.body.appendChild(buttonSave);
+  }
 })();
 
 // ================================================================
@@ -273,7 +279,7 @@ function getBlurComposer(renderer, renderTarget, clearColor) {
   // Blend Pass
   const customPass = new ShaderPass(ShaderBlur, 'tDiffuse1');
   customPass.uniforms['tDiffuse2'].value = renderTarget;
-  customPass.uniforms['mixRatio'].value = 0.5;
+  customPass.uniforms['mixRatio'].value = 0.3;
   customPass.uniforms['amount'].value = 0;
 
   // Compose passes
@@ -319,12 +325,14 @@ function getConcatComposer(renderer, secondImage, clearColor) {
   };
 }
 
-let blurComposerRender, concatComposerRender;
+let renderer, blurComposerRender, concatComposerRender;
 {
-  const renderer = new THREE.WebGLRenderer();
+  const devicePixelRatio = 2;
+
+  renderer = new THREE.WebGLRenderer();
   renderer.setSize(
-    IMG_WIDTH,
-    IMG_HEIGHT * 2,
+    IMG_WIDTH * devicePixelRatio,
+    IMG_HEIGHT * 2 * devicePixelRatio,
     document.body.appendChild(renderer.domElement)
   );
 
