@@ -1,32 +1,32 @@
 import os
 import cv2
-import csv
 import numpy as np
 
+reduce = 4
 
-def load_data(dir):
-    rows = []
-    for f in os.listdir(dir):
+
+def pr1(dir):
+    i = 1
+    files = os.listdir(dir)
+    files_len = len(files)
+    for f in files:
         full_path = os.path.join(dir, f)
-        # Split file name into labels
-        pos, angle = f[:-4].split('_')
-        print(pos, angle)
+        print(i, '/', files_len)
         # Read image
         img = cv2.imread(full_path)
         # Convert color
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         # Resize image
-        img = cv2.resize(img, (640//16, 480//16))
+        img = cv2.resize(img, (640//reduce, 480*2//reduce))
         # Convert image to array
-        img = list(np.reshape(img, [-1]))
-        # Add to row
-        rows.append([pos, angle]+img)
-    return rows
+        data_input = img[:480//reduce, :]
+        cv2.imwrite('./pr1/inputs/'+str(i)+'.jpg', data_input)
+        # Convert image to array
+        data_label = img[480//reduce:, :]
+        cv2.imwrite('./pr1/labels/'+str(i)+'.jpg', data_label)
+        i += 1
 
 
-with open("./data/dataset.csv", 'w', encoding='utf-8', newline='') as f:
-    w = csv.writer(f)
-    root = '../dataset'
-    for dir in os.listdir(root):
-        rows = load_data(os.path.join(root, dir))
-        w.writerows(rows)
+root = '../dataset'
+for dir in os.listdir(root):
+    pr1(os.path.join(root, dir))

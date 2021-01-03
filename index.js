@@ -3,7 +3,6 @@ const bodyParser = require('body-parser');
 const fs = require('fs').promises;
 
 const app = express();
-const label = {};
 
 app.use(express.static(__dirname));
 app.use(bodyParser.text({ type: 'text/html', limit: '50mb' }));
