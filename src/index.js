@@ -3,7 +3,8 @@ const bodyParser = require('body-parser');
 const fs = require('fs').promises;
 const { join } = require('path');
 
-const SAVE_PATH = join(__dirname, 'rawdata/data');
+const RAWDATA_ROOT = join(__dirname, 'rawdata');
+const SAVE_PATH = join(RAWDATA_ROOT, Date.now() + '');
 
 async function main() {
   try {
