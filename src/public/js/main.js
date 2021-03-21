@@ -391,13 +391,13 @@ function animate(t_) {
       }).then(() => {
         if (time < 0.9) {
           time += 0.001;
-          setTimeout(animate, 0);
+          requestAnimationFrame(animate, 0);
         } else {
           document.body.innerHTML = '<h1>Simulation Finished</h1>';
         }
       });
   } else {
-    if (time < 0.9) { requestAnimationFrame(animate); }
+    if (time < 0.9) { requestAnimationFrame(animate, 0); }
     else {
       document.body.innerHTML = '<h1>Simulation Finished</h1>';
     }
